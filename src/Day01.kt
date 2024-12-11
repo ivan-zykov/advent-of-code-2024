@@ -40,7 +40,7 @@ fun main() {
             val secondIdsToCounts: Map<Int, Int> = second.groupingBy { it }.eachCount()
 
             first.sumOf { firstId ->
-                (secondIdsToCounts[firstId] ?: 0) * firstId
+                secondIdsToCounts.getOrDefault(firstId, 0) * firstId
             }
         }
         println("Part 2 with map, time taken: ${timeTaken.inWholeMilliseconds} milliseconds")
