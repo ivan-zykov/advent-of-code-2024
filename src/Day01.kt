@@ -1,31 +1,27 @@
 import kotlin.math.absoluteValue
 import kotlin.time.measureTimedValue
 
-fun List<String>.toOneList(selector: List<String>.() -> String) = asSequence()
-    .map {
-        it.split("\\s+".toRegex())
-            .selector()
-            .toInt()
-    }
-    .sorted()
-    .toList()
+fun List<String>.splitToLists() =
+    map { line ->
+        val first = line.substringBefore(" ").toInt()
+        val second = line.substringAfterLast(" ").toInt()
+        first to second
+    }.unzip()
 
 fun main() {
 
     fun part1(input: List<String>): Int {
 
-        val first = input.toOneList { first() }
-        val second = input.toOneList { last() }
+        val (first, second) = input.splitToLists()
 
-        return first.asSequence()
-            .zip(second.asSequence())
+        return first.sorted()
+            .zip(second.sorted())
             .sumOf { (it.first - it.second).absoluteValue }
     }
 
     fun part2(input: List<String>): Int {
         val (value, timeTaken) = measureTimedValue {
-            val first = input.toOneList { first() }
-            val second = input.toOneList { last() }
+            val (first, second) = input.splitToLists()
 
             first.sumOf { firstId ->
                 second.count { secondId ->
@@ -39,8 +35,7 @@ fun main() {
 
     fun part2Alt(input: List<String>): Int {
         val (value, timeTaken) = measureTimedValue {
-            val first = input.toOneList { first() }
-            val second = input.toOneList { last() }
+            val (first, second) = input.splitToLists()
 
             val secondIdsToCounts: Map<Int, Int> = second.groupingBy { it }.eachCount()
 
@@ -60,6 +55,8 @@ fun main() {
 
     val input = readInput("Day01")
     check(part1(input) == 1873376)
+    check(part1(input) == 1873376)
+
     check(part2(input) == 18997088)
     check(part2Alt(input) == 18997088)
 }
