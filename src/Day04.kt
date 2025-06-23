@@ -76,7 +76,36 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        /*
+            For each A
+                - Find diagonal neighbouring chars
+                - Check set of neighbours to contain M & S
+         */
+        var result = 0
+        input.forEachIndexed { lineIdx, line ->
+            if (lineIdx == 0 || lineIdx == input.lastIndex) return@forEachIndexed
+
+            line.forEachIndexed { charIdx, char ->
+                if (charIdx == 0 || charIdx == line.lastIndex) return@forEachIndexed
+
+                if (char == 'A') {
+                    val topLeftChar = input[lineIdx - 1][charIdx - 1]
+                    val bottomRightChar = input[lineIdx + 1][charIdx + 1]
+                    val majorLocalSet = setOf(topLeftChar, bottomRightChar)
+
+                    val topRightChar = input[lineIdx - 1][charIdx + 1]
+                    val bottomLeftChar = input[lineIdx + 1][charIdx - 1]
+                    val minorLocalSet = setOf(topRightChar, bottomLeftChar)
+
+                    if (majorLocalSet.containsAll(listOf('M', 'S')) &&
+                        minorLocalSet.containsAll(listOf('M', 'S'))) {
+                        result++
+                    }
+                }
+            }
+        }
+
+        return result
     }
 
     // test if implementation meets criteria from the description, like:
@@ -87,7 +116,10 @@ fun main() {
 
     val input = readInput("Day04")
     check(part1(input) == 2414)
-//    part2(input).println()
+
+    val testInput3 = readInput("Day04_test3")
+    check(part2(testInput3) == 9)
+    check(part2(input) == 1871)
 }
 
 private fun List<String>.skewLeft(): List<String> {
