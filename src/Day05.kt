@@ -2,27 +2,14 @@ import kotlin.collections.forEach
 
 fun main() {
     fun part1(input: List<String>): Int {
-
-        // Parse rules
-        // Parse updates
-        // Build map of rules (before and after): a page to list of pages after it
-        // For each page in the update:
-            // None of the prev pages are in the after rules
-            // None of the after pages are in the before rules
-
         val rules = getRulesFrom(input)
         val updates = getUpdatesFrom(input)
-
-        val rulesAfter = rules.rulesAfter()
-        val rulesBefore = rules.rulesBefore()
+        val rulesGrouped = rules.rulesAfter()
 
         return updates.filter { update ->
             update.all { page ->
-                val pagesBefore = update.pagesBefore(page)
                 val pagesAfter = update.pagesAfter(page)
-
-                pagesBefore.follow(rulesAfter[page]) &&
-                        pagesAfter.follow(rulesBefore[page])
+                pagesAfter.followAlt(rulesGrouped[page])
             }
         }.sumOf { update ->
             update.middlePage()
@@ -58,7 +45,7 @@ fun main() {
                 for (i in temp.indices) {
                     var wereSwapped = false
                     for (j in 0..temp.lastIndex - i - 1) {
-                        val pagesAfter = temp.pagesAfter(j)
+                        val pagesAfter = temp.pagesAfter(temp[j])
                         val pagesAfterAllNextPages: Set<String> = buildSet {
                             pagesAfter.forEach { pageAfter ->
                                 rulesGrouped[pageAfter]?.let { addAll(it) }
@@ -97,10 +84,12 @@ private fun List<String>.middlePage(): Int = this[lastIndex / 2].toInt()
 
 private fun List<String>.pagesBefore(page: String) = subList(0, indexOf(page))
 
-private fun List<String>.pagesAfter(idx: Int): List<String> = subList(idx + 1, lastIndex + 1)
+private fun List<String>.pagesAfter(page: String): List<String> = subList(indexOf(page) + 1, lastIndex + 1)
 
 private fun List<String>.follow(rules: List<String>?) =
     all { rules?.contains(it) != true }
+
+private fun List<String>.followAlt(rules: List<String>?) = all { rules?.contains(it) == true  }
 
 private fun List<Pair<String, String>>.rulesBefore() =
     groupBy(keySelector = { it.second }, valueTransform = { it.first })
