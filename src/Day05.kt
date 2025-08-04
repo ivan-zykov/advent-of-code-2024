@@ -9,7 +9,7 @@ fun main() {
         return updates.filter { update ->
             update.all { page ->
                 val pagesAfter = update.pagesAfter(page)
-                pagesAfter.followAlt(rulesGrouped[page])
+                pagesAfter.follow(rulesGrouped[page])
             }
         }.sumOf { update ->
             update.middlePage()
@@ -23,18 +23,18 @@ fun main() {
         Get incorrect updates: reuse part1
         Sort updates with a var of bubble sort:
             Page iterator
-            For each page, check after rules
+            For each page, check rules
                 If rules not satisfied, swap with next
          */
 
         val rules = getRulesFrom(input)
         val updates = getUpdatesFrom(input)
-        val rulesGrouped = rules.rulesAfter()
+        val rulesGrouped = rules.rulesAfter().toSortedMap()
 
         val wrongUpdates = updates.filterNot { update ->
             update.all { page ->
-                val pagesBefore = update.pagesBefore(page)
-                pagesBefore.follow(rulesGrouped[page])
+                val pagesAfter = update.pagesAfter(page)
+                pagesAfter.follow(rulesGrouped[page])
             }
         }
 
@@ -46,12 +46,7 @@ fun main() {
                     var wereSwapped = false
                     for (j in 0..temp.lastIndex - i - 1) {
                         val pagesAfter = temp.pagesAfter(temp[j])
-                        val pagesAfterAllNextPages: Set<String> = buildSet {
-                            pagesAfter.forEach { pageAfter ->
-                                rulesGrouped[pageAfter]?.let { addAll(it) }
-                            }
-                        }
-                        if (temp[j] in pagesAfterAllNextPages) {
+                        if (!pagesAfter.follow(rulesGrouped[temp[j]])) {
                             temp.swapWithNextAt(j)
                             wereSwapped = true
                         }
@@ -62,6 +57,13 @@ fun main() {
                 }
 
                 add(temp.toList())
+            }
+        }
+
+        val wrongUpdatesPost = fixedUpdates.filterNot { update ->
+            update.all { page ->
+                val pagesAfter = update.pagesAfter(page)
+                pagesAfter.follow(rulesGrouped[page])
             }
         }
 
@@ -86,10 +88,7 @@ private fun List<String>.pagesBefore(page: String) = subList(0, indexOf(page))
 
 private fun List<String>.pagesAfter(page: String): List<String> = subList(indexOf(page) + 1, lastIndex + 1)
 
-private fun List<String>.follow(rules: List<String>?) =
-    all { rules?.contains(it) != true }
-
-private fun List<String>.followAlt(rules: List<String>?) = all { rules?.contains(it) == true  }
+private fun List<String>.follow(rules: List<String>?) = all { rules?.contains(it) == true  }
 
 private fun List<Pair<String, String>>.rulesBefore() =
     groupBy(keySelector = { it.second }, valueTransform = { it.first })
