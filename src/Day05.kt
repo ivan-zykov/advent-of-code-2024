@@ -72,6 +72,34 @@ fun main() {
         }
     }
 
+    fun part2Alt(input: List<String>): Int {
+
+        /*
+        Hacky solution just taking the page with average number of other pages after it
+         */
+
+        val rules = getRulesFrom(input)
+        val updates = getUpdatesFrom(input)
+        val rulesGrouped = rules.rulesAfter().toSortedMap()
+
+        val wrongUpdates = updates.filterNot { update ->
+            update.all { page ->
+                val pagesAfter = update.pagesAfter(page)
+                pagesAfter.follow(rulesGrouped[page])
+            }
+        }
+
+        return wrongUpdates.sumOf { update ->
+            val rulesReducedForUpdate = rulesGrouped.filterKeys { key -> key in update }
+                .mapValues { (_, value) ->
+                    value.filter { element -> element in update }
+                }
+            val midSize = rulesReducedForUpdate.maxBy { it.value.size }.value.size / 2
+            rulesReducedForUpdate.filter { it.value.size == midSize }
+                .keys.first().toInt()
+        }
+    }
+
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day05_test")
     check(part1(testInput) == 143)
@@ -79,19 +107,15 @@ fun main() {
 
     val input = readInput("Day05")
     check(part1(input) == 3608)
-    part2(input).println() // 5570 and 5055 both too high
+//    part2(input).println() // 5570 and 5055 both too high
+    check(part2Alt(input) == 4922)
 }
 
 private fun List<String>.middlePage(): Int = this[lastIndex / 2].toInt()
 
-private fun List<String>.pagesBefore(page: String) = subList(0, indexOf(page))
-
 private fun List<String>.pagesAfter(page: String): List<String> = subList(indexOf(page) + 1, lastIndex + 1)
 
-private fun List<String>.follow(rules: List<String>?) = all { rules?.contains(it) == true  }
-
-private fun List<Pair<String, String>>.rulesBefore() =
-    groupBy(keySelector = { it.second }, valueTransform = { it.first })
+private fun List<String>.follow(rules: List<String>?) = all { rules?.contains(it) == true }
 
 private fun List<Pair<String, String>>.rulesAfter() =
     groupBy(keySelector = { it.first }, valueTransform = { it.second })
@@ -101,12 +125,6 @@ private fun getUpdatesFrom(input: List<String>) = input.subList(input.indexOf(""
 
 private fun getRulesFrom(input: List<String>) = input.subList(0, input.indexOf(""))
     .map { it.substringBefore('|') to it.substringAfter('|') }
-
-private fun MutableList<String>.swapWithPrev(idx: Int) {
-    val temp = this[idx - 1]
-    this[idx - 1] = this[idx]
-    this[idx] = temp
-}
 
 private fun MutableList<String>.swapWithNextAt(idx: Int) {
     val temp = this[idx + 1]
