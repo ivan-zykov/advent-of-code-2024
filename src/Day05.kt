@@ -115,10 +115,11 @@ private fun List<String>.middlePage(): Int = this[lastIndex / 2].toInt()
 
 private fun List<String>.pagesAfter(page: String): List<String> = subList(indexOf(page) + 1, lastIndex + 1)
 
-private fun List<String>.follow(rules: List<String>?) = all { rules?.contains(it) == true }
+private fun List<String>.follow(rules: Set<String>?) = all { rules?.contains(it) == true }
 
 private fun List<Pair<String, String>>.rulesAfter() =
     groupBy(keySelector = { it.first }, valueTransform = { it.second })
+        .mapValues { entry -> entry.value.toSet() }
 
 private fun getUpdatesFrom(input: List<String>) = input.subList(input.indexOf("") + 1, input.lastIndex + 1)
     .map { it.split(',') }
