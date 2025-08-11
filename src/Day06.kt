@@ -1,40 +1,108 @@
 fun main() {
     fun part1(input: List<String>): Int {
-        var map = buildMapFor(input)
-
-        var guard = Guard(
-            position = findGuardsInitPosition(input),
-            direction = Direction.UP
-        )
-
-        var borderReached = false
-        while (!borderReached) {
-            guard = guard.moveOn(map)
-
-            val newPosition = guard.position
-            map = map.updatedWith(newPosition)
-
-            val newLocation = map[newPosition]
-            check(newLocation != null) { "Filed to get new location for checking border" }
-            if (newLocation.isBorder) {
-                borderReached = true
-            }
-        }
+        val map = simulateGuardsPatrolFor(input)
 
         return map.count { it.value.isVisited }
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        /*
+        1. Run part 1 and note all visited locations
+        2. Find potential locations for new Obst.
+            - Can be visited (from 1. above)
+            - (Optional: Will not direct guard to border)
+        3. For each potential location with new Obst.
+            - Start guard moving
+            - Record each visited location and guard's direction
+        4. If position with same direction visited twice
+            - Guard is in the loop
+            - Stop trial for this potential location
+            - Record this location
+         */
+
+        val mapInit = buildMapFor(input)
+        val guardInit = Guard(
+            position = findGuardsInitPosition(input),
+            direction = Direction.UP
+        )
+
+        val visitedPositions = simulateGuardsPatrolFor(input)
+            .filter { it.value.isVisited }.keys
+        val positionsCausingLoop = mutableSetOf<Position>()
+//        todo: Try check for all positions
+//        todo: Try checking potential positions in parallel (co-routines)
+        visitedPositions.forEach { potentialPosition ->
+            var map = mapInit
+            map = map.withObstacleAt(potentialPosition)
+            var guard = guardInit
+
+            var borderReached = false
+            val prevPositionsToDirections = mutableSetOf<Pair<Position, Direction>>()
+            while (!borderReached) {
+                guard = guard.moveOn(map)
+
+                val newPosition = guard.position
+                val newDirection = guard.direction
+                if ((newPosition to newDirection) in prevPositionsToDirections) {
+                    positionsCausingLoop.add(potentialPosition)
+                    "Causes a loop: $potentialPosition".println()
+                    return@forEach
+                } else {
+                    prevPositionsToDirections.add(newPosition to newDirection)
+                }
+                map = map.updatedWith(newPosition)
+
+                val newLocation = map[newPosition]
+                check(newLocation != null) { "Filed to get new location for checking border" }
+                if (newLocation.isBorder) {
+                    borderReached = true
+                }
+            }
+        }
+
+        return positionsCausingLoop.size
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day06_test")
     check(part1(testInput) == 41)
+    check(part2(testInput) == 6)
 
     val input = readInput("Day06")
     check(part1(input) == 4602)
-//    part2(input).println()
+    part2(input).println() // 1564 and 1565 too low
+}
+
+private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
+    var map = buildMapFor(input)
+
+    var guard = Guard(
+        position = findGuardsInitPosition(input),
+        direction = Direction.UP
+    )
+
+    var borderReached = false
+    while (!borderReached) {
+        guard = guard.moveOn(map)
+
+        val newPosition = guard.position
+        map = map.updatedWith(newPosition)
+
+        val newLocation = map[newPosition]
+        check(newLocation != null) { "Filed to get new location for checking border" }
+        if (newLocation.isBorder) {
+            borderReached = true
+        }
+    }
+    return map
+}
+
+private fun Map<Position, Location>.withObstacleAt(positionOfNewObstacle: Position): Map<Position, Location> {
+    val mutableMap = this.toMutableMap()
+    val locationForNewObstacle = mutableMap[positionOfNewObstacle]
+    check(locationForNewObstacle != null) { "Could not get location for new obstacle" }
+    mutableMap[positionOfNewObstacle] = locationForNewObstacle.copy(isObstacle = true)
+    return mutableMap.toMap()
 }
 
 private const val OBSTACLE_CHAR = '#'
@@ -43,7 +111,7 @@ private const val GUARD_CHAR = '^'
 private fun Map<Position, Location>.updatedWith(newPosition: Position): Map<Position, Location> {
     val result = this.toMutableMap()
     val newLocation = result[newPosition]
-    check(newLocation != null) {"Failed get location for new position"}
+    check(newLocation != null) { "Failed get location for new position" }
     result[newPosition] = newLocation.copy(isVisited = true)
     return result.toMap()
 }
