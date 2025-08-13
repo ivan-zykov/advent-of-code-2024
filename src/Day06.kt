@@ -40,7 +40,7 @@ fun main() {
             var guard = guardInit
 
             var borderReached = false
-            val prevPositionsToDirections = mutableSetOf<Pair<Position, Direction>>()
+            val prevPositionsToDirections = mutableSetOf(guard.position to guard.direction)
             while (!borderReached) {
                 guard = guard.movedOn(map)
 
