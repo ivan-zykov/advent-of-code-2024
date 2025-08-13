@@ -27,6 +27,7 @@ fun main() {
         )
 
         val visitedPositions = simulateGuardsPatrolFor(input)
+            .filterNot { it.key == guardInit.position }
             .filter { it.value.isVisited }.keys
         val positionsCausingLoop = mutableSetOf<Position>()
 //        todo: Try check for all positions
