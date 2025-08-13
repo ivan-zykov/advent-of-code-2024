@@ -65,8 +65,11 @@ fun main() {
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day06_test")
+    val testInput2 = readInput("Day06_test2")
     check(part1(testInput) == 41)
     check(part2(testInput) == 6)
+    check(part1(testInput2) == 3)
+    check(part2(testInput2) == 0)
 
     val input = readInput("Day06")
     check(part1(input) == 4602)
