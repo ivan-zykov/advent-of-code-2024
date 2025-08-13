@@ -40,7 +40,7 @@ fun main() {
             var borderReached = false
             val prevPositionsToDirections = mutableSetOf<Pair<Position, Direction>>()
             while (!borderReached) {
-                guard = guard.moveOn(map)
+                guard = guard.movedOn(map)
 
                 val newPosition = guard.position
                 val newDirection = guard.direction
@@ -74,7 +74,7 @@ fun main() {
 
     val input = readInput("Day06")
     check(part1(input) == 4602)
-    part2(input).println() // 1564 and 1565 too low
+    check(part2(input) == 1703)
 }
 
 private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
@@ -87,7 +87,7 @@ private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location
 
     var borderReached = false
     while (!borderReached) {
-        guard = guard.moveOn(map)
+        guard = guard.movedOn(map)
 
         val newPosition = guard.position
         map = map.updatedWith(newPosition)
@@ -116,6 +116,17 @@ private fun Map<Position, Location>.updatedWith(newPosition: Position): Map<Posi
     val result = this.toMutableMap()
     val newLocation = result[newPosition]
     check(newLocation != null) { "Failed get location for new position" }
+    check(!newLocation.isObstacle) {
+        """
+        | Error! Trying to step on obstacle.
+        | New position:
+        | $newPosition
+        | New location:
+        | $newLocation
+        | Map:
+        | $this
+    """.trimIndent()
+    }
     result[newPosition] = newLocation.copy(isVisited = true)
     return result.toMap()
 }
@@ -161,21 +172,49 @@ data class Guard(
     val position: Position,
     val direction: Direction
 ) {
-    fun moveOn(map: Map<Position, Location>): Guard {
-        val locationAhead = map[nextPositionIn(direction)]
+    fun movedOn(map: Map<Position, Location>): Guard {
+        val newDirection = findNewValidDirection(direction, map, 1)
+        val newPosition = nextPositionIn(newDirection)
+        return Guard(newPosition, newDirection)
+    }
+
+    private fun findNewValidDirection(
+        currentDirection: Direction,
+        map: Map<Position, Location>,
+        iterCount: Int
+    ): Direction {
+        require(iterCount <= 3) {
+            """
+            | Guards tries turning 4th time. So, he is in an invalid position i.e. trapped.
+            | Current iteration number:
+            | $iterCount
+            | Current direction:
+            | $currentDirection
+            | Guard:
+            | $this
+            | Locations with obstacles:
+            | ${map.filter { it.value.isObstacle }}
+            | Map:
+            | $map
+        """.trimIndent()
+        }
+        val locationAhead = map[nextPositionIn(currentDirection)]
         check(locationAhead != null) { "Failed to find next location while guard moving" }
         val newDirection = if (locationAhead.isObstacle) {
-            when (direction) {
+            when (currentDirection) {
                 Direction.UP -> Direction.RIGHT
                 Direction.RIGHT -> Direction.DOWN
                 Direction.DOWN -> Direction.LEFT
                 Direction.LEFT -> Direction.UP
             }
         } else {
-            direction
+            currentDirection
         }
-        val newPosition = nextPositionIn(newDirection)
-        return Guard(newPosition, newDirection)
+        // Check location ahead again and so on
+        if (map[nextPositionIn(newDirection)]?.isObstacle == true) {
+            return findNewValidDirection(newDirection, map, iterCount + 1)
+        }
+        return newDirection
     }
 
     private fun nextPositionIn(newDirection: Direction) = when (newDirection) {
