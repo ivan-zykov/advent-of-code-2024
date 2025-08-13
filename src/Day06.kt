@@ -2,7 +2,7 @@ fun main() {
     fun part1(input: List<String>): Int {
         val map = simulateGuardsPatrolFor(input)
 
-        return map.count { it.value.isVisited }
+        return map.asSequence().count { it.value.isVisited }
     }
 
     fun part2(input: List<String>): Int {
@@ -27,12 +27,14 @@ fun main() {
         )
 
         val visitedPositions = simulateGuardsPatrolFor(input)
+            .asSequence()
             .filterNot { it.key == guardInit.position }
-            .filter { it.value.isVisited }.keys
+            .filter { it.value.isVisited }
+            .map { it.key }
         val positionsCausingLoop = mutableSetOf<Position>()
 //        todo: Try check for all positions
 //        todo: Try checking potential positions in parallel (co-routines)
-        visitedPositions.forEach { potentialPosition ->
+        visitedPositions.asSequence().forEach { potentialPosition ->
             var map = mapInit
             map = map.withObstacleAt(potentialPosition)
             var guard = guardInit
@@ -132,8 +134,8 @@ private fun Map<Position, Location>.updatedWith(newPosition: Position): Map<Posi
 }
 
 private fun buildMapFor(input: List<String>) = buildMap {
-    input.forEachIndexed { i, line ->
-        line.forEachIndexed { j, char ->
+    input.asSequence().forEachIndexed { i, line ->
+        line.asSequence().forEachIndexed { j, char ->
             val key = Position(i, j)
 
             val isVerticalBorder = j in listOf(0, line.lastIndex)
@@ -150,9 +152,10 @@ private fun buildMapFor(input: List<String>) = buildMap {
 }
 
 private fun findGuardsInitPosition(input: List<String>): Position {
-    val lineWithGuard = input.find { it.contains(GUARD_CHAR) }
-    val i = input.indexOf(lineWithGuard)
-    val j = lineWithGuard?.indexOf(GUARD_CHAR) ?: -1
+    val inputSequence = input.asSequence()
+    val lineWithGuard = inputSequence.find { it.contains(GUARD_CHAR) }
+    val i = inputSequence.indexOf(lineWithGuard)
+    val j = lineWithGuard?.asSequence()?.indexOf(GUARD_CHAR) ?: -1
     check(i > 0) { "Could not find initial x coordinate of guard" }
     return Position(i, j)
 }
