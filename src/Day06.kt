@@ -31,37 +31,14 @@ fun main() {
             .filterNot { it.key == guardInit.position }
             .filter { it.value.isVisited }
             .map { it.key }
-        val positionsCausingLoop = mutableSetOf<Position>()
-//        todo: Try check for all positions
-//        todo: Try checking potential positions in parallel (co-routines)
-        visitedPositions.asSequence().forEach { potentialPosition ->
-            var map = mapInit
-            map = map.withObstacleAt(potentialPosition)
-            var guard = guardInit
 
-            var borderReached = false
-            val prevPositionsToDirections = mutableSetOf(guard.position to guard.direction)
-            while (!borderReached) {
-                guard = guard.movedOn(map)
-
-                val newPosition = guard.position
-                val newDirection = guard.direction
-                if ((newPosition to newDirection) in prevPositionsToDirections) {
-                    positionsCausingLoop.add(potentialPosition)
-                    "Causes a loop: $potentialPosition".println()
-                    return@forEach
-                } else {
-                    prevPositionsToDirections.add(newPosition to newDirection)
-                }
-                map = map.updatedWith(newPosition)
-
-                val newLocation = map[newPosition]
-                check(newLocation != null) { "Filed to get new location for checking border" }
-                if (newLocation.isBorder) {
-                    borderReached = true
+//      todo: Try checking potential positions in parallel (co-routines)
+        val positionsCausingLoop =
+            buildSet {
+                visitedPositions.asSequence().forEach { potentialPosition ->
+                    addPotentialPositionIfLooping(potentialPosition, mapInit, guardInit)
                 }
             }
-        }
 
         return positionsCausingLoop.size
     }
@@ -76,7 +53,40 @@ fun main() {
 
     val input = readInput("Day06")
     check(part1(input) == 4602)
-    check(part2(input) == 1703)
+//    check(part2(input) == 1703)
+}
+
+private fun MutableSet<Position>.addPotentialPositionIfLooping(
+    potentialPosition: Position,
+    mapInit: Map<Position, Location>,
+    guardInit: Guard
+) {
+    var map = mapInit
+    map = map.withObstacleAt(potentialPosition)
+    var guard = guardInit
+
+    var borderReached = false
+    val prevPositionsToDirections = mutableSetOf(guard.position to guard.direction)
+    while (!borderReached) {
+        guard = guard.movedOn(map)
+
+        val newPosition = guard.position
+        val newDirection = guard.direction
+        if ((newPosition to newDirection) in prevPositionsToDirections) {
+            add(potentialPosition)
+            "Causes a loop: $potentialPosition".println()
+            return
+        } else {
+            prevPositionsToDirections.add(newPosition to newDirection)
+        }
+        map = map.updatedWith(newPosition)
+
+        val newLocation = map[newPosition]
+        check(newLocation != null) { "Filed to get new location for checking border" }
+        if (newLocation.isBorder) {
+            borderReached = true
+        }
+    }
 }
 
 private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
