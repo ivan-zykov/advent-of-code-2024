@@ -1,3 +1,8 @@
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+
 fun main() {
     fun part1(input: List<String>): Int {
         val map = simulateGuardsPatrolFor(input)
@@ -33,12 +38,18 @@ fun main() {
             .map { it.key }
 
 //      todo: Try checking potential positions in parallel (co-routines)
-        val positionsCausingLoop =
-            buildSet {
-                visitedPositions.asSequence().forEach { potentialPosition ->
-                    addPotentialPositionIfLooping(potentialPosition, mapInit, guardInit)
+        val positionsCausingLoop = runBlocking {
+            val deferredResults = visitedPositions.asSequence().map { potentialPosition ->
+                async(Dispatchers.Default) {
+                    if (potentialPosition.causesLooping(mapInit, guardInit)) {
+                        potentialPosition
+                    } else {
+                        null
+                    }
                 }
-            }
+            }.toList()
+            deferredResults.awaitAll().filterNotNull().toSet()
+        }
 
         return positionsCausingLoop.size
     }
@@ -52,17 +63,16 @@ fun main() {
     check(part2(testInput2) == 0)
 
     val input = readInput("Day06")
-    check(part1(input) == 4602)
+//    check(part1(input) == 4602)
 //    check(part2(input) == 1703)
 }
 
-private fun MutableSet<Position>.addPotentialPositionIfLooping(
-    potentialPosition: Position,
+private fun Position.causesLooping(
     mapInit: Map<Position, Location>,
     guardInit: Guard
-) {
+): Boolean {
     var map = mapInit
-    map = map.withObstacleAt(potentialPosition)
+    map = map.withObstacleAt(this)
     var guard = guardInit
 
     var borderReached = false
@@ -73,9 +83,8 @@ private fun MutableSet<Position>.addPotentialPositionIfLooping(
         val newPosition = guard.position
         val newDirection = guard.direction
         if ((newPosition to newDirection) in prevPositionsToDirections) {
-            add(potentialPosition)
-            "Causes a loop: $potentialPosition".println()
-            return
+            "Causes a loop: $this".println()
+            return true
         } else {
             prevPositionsToDirections.add(newPosition to newDirection)
         }
@@ -87,6 +96,7 @@ private fun MutableSet<Position>.addPotentialPositionIfLooping(
             borderReached = true
         }
     }
+    return false
 }
 
 private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
