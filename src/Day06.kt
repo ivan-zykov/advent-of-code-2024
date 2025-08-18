@@ -2,7 +2,7 @@ import java.util.stream.Collectors
 
 fun main() {
     fun part1(input: List<String>): Int {
-        val map = simulateGuardsPatrolFor(input)
+        val map: Map<Position, Location> = simulateGuardsPatrolFor(input)
 
         return map.asSequence().count { it.value.isVisited }
     }
@@ -28,7 +28,7 @@ fun main() {
             direction = Direction.UP
         )
 
-        val visitedPositions = simulateGuardsPatrolFor(input)
+        val visitedPositions: Set<Position> = simulateGuardsPatrolFor(input)
             .asSequence()
             .filterNot { it.key == guardInit.position }
             .filter { it.value.isVisited }
@@ -63,7 +63,7 @@ private fun Position.causesLooping(
     mapInit: Map<Position, Location>,
     guardInit: Guard
 ): Boolean {
-    var map = mapInit
+    var map: Map<Position, Location> = mapInit
     map = map.withObstacleAt(this)
     var guard = guardInit
 
@@ -92,7 +92,7 @@ private fun Position.causesLooping(
 }
 
 private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
-    var map = buildMapFor(input)
+    var map: Map<Position, Location> = buildMapFor(input)
 
     var guard = Guard(
         position = findGuardsInitPosition(input),
@@ -164,8 +164,8 @@ private fun buildMapFor(input: List<String>) = buildMap {
 }
 
 private fun findGuardsInitPosition(input: List<String>): Position {
-    val inputSequence = input.asSequence()
-    val lineWithGuard = inputSequence.find { it.contains(GUARD_CHAR) }
+    val inputSequence: Sequence<String> = input.asSequence()
+    val lineWithGuard: String? = inputSequence.find { it.contains(GUARD_CHAR) }
     val i = inputSequence.indexOf(lineWithGuard)
     val j = lineWithGuard?.asSequence()?.indexOf(GUARD_CHAR) ?: -1
     check(i > 0) { "Could not find initial x coordinate of guard" }
