@@ -69,7 +69,7 @@ private fun Position.causesLooping(
         map = map.updatedWith(newPosition)
 
         val newLocation = map[newPosition]
-        check(newLocation != null) { "Filed to get new location for checking border" }
+        checkNotNull(newLocation) { "Filed to get new location for checking border" }
         if (newLocation.isBorder) {
             borderReached = true
         }
@@ -93,7 +93,7 @@ private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location
         map = map.updatedWith(newPosition)
 
         val newLocation = map[newPosition]
-        check(newLocation != null) { "Filed to get new location for checking border" }
+        checkNotNull(newLocation) { "Filed to get new location for checking border" }
         if (newLocation.isBorder) {
             borderReached = true
         }
@@ -104,7 +104,7 @@ private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location
 private fun Map<Position, Location>.withObstacleAt(positionOfNewObstacle: Position): Map<Position, Location> {
     val mutableMap = this.toMutableMap()
     val locationForNewObstacle = mutableMap[positionOfNewObstacle]
-    check(locationForNewObstacle != null) { "Could not get location for new obstacle" }
+    checkNotNull(locationForNewObstacle) { "Could not get location for new obstacle" }
     mutableMap[positionOfNewObstacle] = locationForNewObstacle.copy(isObstacle = true)
     return mutableMap.toMap()
 }
@@ -115,7 +115,7 @@ private const val GUARD_CHAR = '^'
 private fun Map<Position, Location>.updatedWith(newPosition: Position): Map<Position, Location> {
     val result = this.toMutableMap()
     val newLocation = result[newPosition]
-    check(newLocation != null) { "Failed get location for new position" }
+    checkNotNull(newLocation) { "Failed get location for new position" }
     check(!newLocation.isObstacle) {
         """
         | Error! Trying to step on obstacle.
@@ -200,7 +200,7 @@ data class Guard(
         """.trimIndent()
         }
         val locationAhead = map[nextPositionIn(currentDirection)]
-        check(locationAhead != null) { "Failed to find next location while guard moving" }
+        checkNotNull(locationAhead) { "Failed to find next location while guard moving" }
         val newDirection = if (locationAhead.isObstacle) {
             when (currentDirection) {
                 Direction.UP -> Direction.RIGHT
