@@ -1,5 +1,3 @@
-import java.util.stream.Collectors
-
 fun main() {
     fun part1(input: List<String>): Int {
         val map: Map<Position, Location> = simulateGuardsPatrolFor(input)
@@ -25,11 +23,30 @@ fun main() {
             .filter { potentialPosition ->
                 potentialPosition != null && potentialPosition.causesLooping(mapInit, guardInit)
             }
-            .collect(Collectors.toSet())
+            .count()
+            .toInt()
+    }
+
+    fun part2Mutable(input: List<String>): Int {
+        val mapInit: MutableMap<Position, Location> = buildMutableMapFor(input)
+        val guardInit = Guard(
+            position = findGuardsInitPosition(input),
+            direction = Direction.UP
+        )
+
+        val visitedPositions: Set<Position> = simulateGuardsPatrolFor(input)
             .asSequence()
-            .filterNotNull()
+            .filterNot { it.key == guardInit.position }
+            .filter { it.value.isVisited }
+            .map { it.key }
             .toSet()
-            .size
+
+        return visitedPositions.parallelStream()
+            .filter { potentialPosition ->
+                potentialPosition != null && potentialPosition.causesLoopingMutable(mapInit, guardInit)
+            }
+            .count()
+            .toInt()
     }
 
     // test if implementation meets criteria from the description, like:
@@ -37,12 +54,15 @@ fun main() {
     val testInput2 = readInput("Day06_test2")
     check(part1(testInput) == 41)
     check(part2(testInput) == 6)
+    check(part2Mutable(testInput) == 6)
     check(part1(testInput2) == 3)
     check(part2(testInput2) == 0)
+    check(part2Mutable(testInput2) == 0)
 
     val input = readInput("Day06")
     check(part1(input) == 4602)
-    check(part2(input) == 1703)
+//    check(part2(input) == 1703)
+    check(part2Mutable(input) == 1703)
 }
 
 private fun Position.causesLooping(
@@ -61,7 +81,7 @@ private fun Position.causesLooping(
         val newPosition = guard.position
         val newDirection = guard.direction
         if ((newPosition to newDirection) in prevPositionsToDirections) {
-            "Causes a loop: $this".println()
+//            "Causes a loop: $this".println()
             return true
         } else {
             prevPositionsToDirections.add(newPosition to newDirection)
@@ -77,20 +97,53 @@ private fun Position.causesLooping(
     return false
 }
 
-private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
-    var map: Map<Position, Location> = buildMapFor(input)
+private fun Position.causesLoopingMutable(
+    mapInit: MutableMap<Position, Location>,
+    guardInit: Guard
+): Boolean {
+    val map = mapInit.mapValues { (_, location) -> location.copy() }
+        .toMutableMap()
+    map.addObstacleAt(this)
+    val guard = guardInit.copy()
 
-    var guard = Guard(
+    var borderReached = false
+    val prevPositionsToDirections = mutableSetOf(guard.position to guard.direction)
+    while (!borderReached) {
+        guard.moveOn(map)
+
+        val newPosition = guard.position
+        val newDirection = guard.direction
+        if ((newPosition to newDirection) in prevPositionsToDirections) {
+//            "Causes a loop: $this".println()
+            return true
+        } else {
+            prevPositionsToDirections.add(newPosition to newDirection)
+        }
+        map.updateWith(newPosition)
+
+        val newLocation = map[newPosition]
+        checkNotNull(newLocation) { "Filed to get new location for checking border" }
+        if (newLocation.isBorder) {
+            borderReached = true
+        }
+    }
+    return false
+}
+
+private fun simulateGuardsPatrolFor(input: List<String>): Map<Position, Location> {
+    val map: MutableMap<Position, Location> = buildMutableMapFor(input)
+
+    val guard = Guard(
         position = findGuardsInitPosition(input),
         direction = Direction.UP
     )
 
     var borderReached = false
     while (!borderReached) {
-        guard = guard.movedOn(map)
+        guard.moveOn(map)
 
         val newPosition = guard.position
-        map = map.updatedWith(newPosition)
+        map.updateWith(newPosition)
 
         val newLocation = map[newPosition]
         checkNotNull(newLocation) { "Filed to get new location for checking border" }
@@ -107,6 +160,12 @@ private fun Map<Position, Location>.withObstacleAt(positionOfNewObstacle: Positi
     checkNotNull(locationForNewObstacle) { "Could not get location for new obstacle" }
     mutableMap[positionOfNewObstacle] = locationForNewObstacle.copy(isObstacle = true)
     return mutableMap.toMap()
+}
+
+private fun MutableMap<Position, Location>.addObstacleAt(positionOfNewObstacle: Position) {
+    val locationForNewObstacle = this[positionOfNewObstacle]
+    checkNotNull(locationForNewObstacle) { "Could not get location for new obstacle" }
+    this[positionOfNewObstacle]?.isObstacle = true
 }
 
 private const val OBSTACLE_CHAR = '#'
@@ -131,6 +190,23 @@ private fun Map<Position, Location>.updatedWith(newPosition: Position): Map<Posi
     return result.toMap()
 }
 
+private fun MutableMap<Position, Location>.updateWith(newPosition: Position) {
+    val newLocation = this[newPosition]
+    checkNotNull(newLocation) { "Failed get location for new position" }
+    check(!newLocation.isObstacle) {
+        """
+        | Error! Trying to step on obstacle.
+        | New position:
+        | $newPosition
+        | New location:
+        | $newLocation
+        | Map:
+        | $this
+    """.trimIndent()
+    }
+    this[newPosition]?.isVisited = true
+}
+
 private fun buildMapFor(input: List<String>) = buildMap {
     input.asSequence().forEachIndexed { i, line ->
         line.asSequence().forEachIndexed { j, char ->
@@ -149,6 +225,26 @@ private fun buildMapFor(input: List<String>) = buildMap {
     }
 }
 
+private fun buildMutableMapFor(input: List<String>): MutableMap<Position, Location> {
+    val map = mutableMapOf<Position, Location>()
+    input.asSequence().forEachIndexed { i, line ->
+        line.asSequence().forEachIndexed { j, char ->
+            val key = Position(i, j)
+
+            val isVerticalBorder = j in listOf(0, line.lastIndex)
+            val isHorizontalBorder = i in listOf(0, input.lastIndex)
+
+            val value = Location(
+                isObstacle = char == OBSTACLE_CHAR,
+                isBorder = isVerticalBorder || isHorizontalBorder,
+                isVisited = char == GUARD_CHAR
+            )
+            map.put(key, value)
+        }
+    }
+    return map
+}
+
 private fun findGuardsInitPosition(input: List<String>): Position {
     val inputSequence: Sequence<String> = input.asSequence()
     val lineWithGuard: String? = inputSequence.find { it.contains(GUARD_CHAR) }
@@ -164,19 +260,25 @@ data class Position(
 )
 
 data class Location(
-    val isObstacle: Boolean,
+    var isObstacle: Boolean,
     val isBorder: Boolean,
-    val isVisited: Boolean = false
+    var isVisited: Boolean = false
 )
 
 data class Guard(
-    val position: Position,
-    val direction: Direction
+    var position: Position,
+    var direction: Direction
 ) {
     fun movedOn(map: Map<Position, Location>): Guard {
         val newDirection = findNewValidDirection(direction, map, 1)
         val newPosition = nextPositionIn(newDirection)
         return Guard(newPosition, newDirection)
+    }
+
+    fun moveOn(map: MutableMap<Position, Location>) {
+        val newDirection = findNewValidDirection(direction, map, 1)
+        direction = newDirection
+        position = nextPositionIn(newDirection)
     }
 
     private fun findNewValidDirection(
