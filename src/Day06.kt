@@ -8,21 +8,7 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        /*
-        1. Run part 1 and note all visited locations
-        2. Find potential locations for new Obst.
-            - Can be visited (from 1. above)
-            - (Optional: Will not direct guard to border)
-        3. For each potential location with new Obst.
-            - Start guard moving
-            - Record each visited location and guard's direction
-        4. If position with same direction visited twice
-            - Guard is in the loop
-            - Stop trial for this potential location
-            - Record this location
-         */
-
-        val mapInit = buildMapFor(input)
+        val mapInit: Map<Position, Location> = buildMapFor(input)
         val guardInit = Guard(
             position = findGuardsInitPosition(input),
             direction = Direction.UP
