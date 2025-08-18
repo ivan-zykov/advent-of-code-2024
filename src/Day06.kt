@@ -1,7 +1,4 @@
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import java.util.stream.Collectors
 
 fun main() {
     fun part1(input: List<String>): Int {
@@ -36,22 +33,17 @@ fun main() {
             .filterNot { it.key == guardInit.position }
             .filter { it.value.isVisited }
             .map { it.key }
+            .toSet()
 
-//      todo: Try checking potential positions in parallel (co-routines)
-        val positionsCausingLoop = runBlocking {
-            val deferredResults = visitedPositions.asSequence().map { potentialPosition ->
-                async(Dispatchers.Default) {
-                    if (potentialPosition.causesLooping(mapInit, guardInit)) {
-                        potentialPosition
-                    } else {
-                        null
-                    }
-                }
-            }.toList()
-            deferredResults.awaitAll().filterNotNull().toSet()
-        }
-
-        return positionsCausingLoop.size
+        return visitedPositions.parallelStream()
+            .filter { potentialPosition ->
+                potentialPosition != null && potentialPosition.causesLooping(mapInit, guardInit)
+            }
+            .collect(Collectors.toSet())
+            .asSequence()
+            .filterNotNull()
+            .toSet()
+            .size
     }
 
     // test if implementation meets criteria from the description, like:
@@ -63,8 +55,8 @@ fun main() {
     check(part2(testInput2) == 0)
 
     val input = readInput("Day06")
-//    check(part1(input) == 4602)
-//    check(part2(input) == 1703)
+    check(part1(input) == 4602)
+    check(part2(input) == 1703)
 }
 
 private fun Position.causesLooping(
